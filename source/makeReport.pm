@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Exporter;
 use Scalar::Util qw(looks_like_number);
+use File::Temp qw/ tempfile /;
 
 our @ISA    = qw(Exporter);
 our @EXPORT = qw(build_template file2table file2text dir2list cstmrow_filter);
@@ -52,16 +53,16 @@ sub build_template {
 			push @summary, '<li><a href=#' . $1 . '>' . $2 . '</a></li>';
 		}
 	}
-	open TEMPRESULT, ">$templateName.temp" or die "can't write $!";
-	print TEMPRESULT ( join( "\n", @head ) );
-	print TEMPRESULT $summaryTop . "\n";
-	print TEMPRESULT ( join( "\n", @summary ) );
-	print TEMPRESULT $summaryBottom . "\n";
-	print TEMPRESULT ( join( "\n", @content ) );
-	close(TEMPRESULT);
+	(my $fh, my $tmpfilename) = tempfile();
+	print $fh ( join( "\n", @head ) );
+	print $fh $summaryTop . "\n";
+	print $fh ( join( "\n", @summary ) );
+	print $fh $summaryBottom . "\n";
+	print $fh ( join( "\n", @content ) );
+	close($fh);
 
 	my $template = HTML::Template->new(
-		filename          => "$templateName.temp",
+		filename          => "$tmpfilename",
 		loop_context_vars => 1,
 		die_on_bad_params => 0,
 		filter            => \&cstmrow_filter
@@ -69,7 +70,7 @@ sub build_template {
 	foreach my $key ( keys %hash ) {
 		$template->param( $key => $hash{$key} );
 	}
-	unlink "$templateName.temp";
+	unlink "$tmpfilename";
 	return ($template);
 }
 
